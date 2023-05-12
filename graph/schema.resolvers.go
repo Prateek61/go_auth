@@ -6,8 +6,7 @@ package graph
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
+	"errors"
 
 	"github.com/Prateek61/go_auth/graph/model"
 )
@@ -18,18 +17,21 @@ func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) 
 	// If user not found, return error
 	// If user found, create todo with input.UserID
 
-	user := getUser(input.UserID, r.users)
-	if user == nil {
-		return nil, fmt.Errorf("user not found")
+	_, err := r.UsersRepo.GetUserByID(input.UserID)
+	if err != nil {
+		return nil, errors.New("user not found")
 	}
 
 	todo := &model.Todo{
 		Text:   input.Text,
-		ID:     fmt.Sprintf("T%d", rand.Int()),
-		User:   user,
 		UserID: input.UserID,
 	}
-	r.todos = append(r.todos, todo)
+
+	err = r.TodosRepo.CreateTodo(todo)
+	if err != nil {
+		return nil, err
+	}
+
 	return todo, nil
 }
 
@@ -38,38 +40,36 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 	user := &model.User{
 		Username: input.Username,
 		Email:    input.Email,
-		ID:       fmt.Sprintf("U%d", rand.Int()),
 	}
 
-	r.users = append(r.users, user)
+	err := r.UsersRepo.CreateUser(user)
+	if err != nil {
+		return nil, err
+	}
+
 	return user, nil
 }
 
 // Todos is the resolver for the todos field.
 func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	return r.todos, nil
+	return r.TodosRepo.GetTodos()
 }
 
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
-	user := getUser(id, r.users)
-	if user == nil {
-		return nil, fmt.Errorf("user not found")
-	}
-
-	return user, nil
+	return r.UsersRepo.GetUserByID(id)
 }
 
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
-	return r.users, nil
+	return r.UsersRepo.GetUsers()
 }
 
 // User is the resolver for the user field.
 func (r *todoResolver) User(ctx context.Context, obj *model.Todo) (*model.User, error) {
-	user := getUser(obj.UserID, r.users)
-	if user == nil {
-		return nil, fmt.Errorf("user not found")
+	user, err := r.UsersRepo.GetUserByID(obj.UserID)
+	if err != nil {
+		return nil, err
 	}
 
 	return user, nil
@@ -77,15 +77,7 @@ func (r *todoResolver) User(ctx context.Context, obj *model.Todo) (*model.User, 
 
 // Todos is the resolver for the todos field.
 func (r *userResolver) Todos(ctx context.Context, obj *model.User) ([]*model.Todo, error) {
-	todos := []*model.Todo{}
-
-	for _, todo := range r.todos {
-		if todo.UserID == obj.ID {
-			todos = append(todos, todo)
-		}
-	}
-
-	return todos, nil
+	return r.TodosRepo.GetTodosByUserID(obj.ID)
 }
 
 // Mutation returns MutationResolver implementation.
@@ -104,19 +96,3 @@ type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type todoResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func getUser(id string, users []*model.User) *model.User {
-	for _, user := range users {
-		if user.ID == id {
-			return user
-		}
-	}
-
-	return nil
-}

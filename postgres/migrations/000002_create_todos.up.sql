@@ -1,0 +1,6 @@
+CREATE TABLE todos (
+    id BIGSERIAL PRIMARY KEY,
+    text TEXT NOT NULL,
+
+    user_id BIGSERIAL REFERENCES users (id) ON DELETE CASCADE NOT NULL
+);
