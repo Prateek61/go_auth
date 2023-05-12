@@ -9,45 +9,34 @@ type UsersRepo struct {
 	DB *pg.DB
 }
 
-func (u *UsersRepo) GetUserByID(id string) (*model.User, error) {
+func (u *UsersRepo) GetUserByField(field string, value string) (*model.User, error) {
 	var user model.User
-	err := u.DB.Model(&user).Where("id = ?", id).First()
+	err := u.DB.Model(&user).Where(field + " = ?", value).First()
 
-	if err != nil {
-		return nil, err
-	}
+	return &user, err
+}
 
-	return &user, nil
+func (u *UsersRepo) GetUserByID(id string) (*model.User, error) {
+	return u.GetUserByField("id", id)
 }
 
 func (u *UsersRepo) GetUserByUsername(username string) (*model.User, error) {
-	var user model.User
-	err := u.DB.Model(&user).Where("username = ?", username).First()
+	return u.GetUserByField("username", username)
+}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return &user, nil
+func (u *UsersRepo) GetUserByEmail(email string) (*model.User, error) {
+	return u.GetUserByField("email", email)
 }
 
 func (u *UsersRepo) GetUsers() ([]*model.User, error) {
 	var users []*model.User
 	err := u.DB.Model(&users).Select()
 
-	if err != nil {
-		return nil, err
-	}
-
-	return users, nil
+	return users, err
 }
 
-func (u *UsersRepo) CreateUser(user *model.User) error {
-	_, err := u.DB.Model(user).Insert()
+func (u *UsersRepo) CreateUser(tx *pg.Tx, user *model.User) (*model.User, error) {
+	_, err := tx.Model(user).Returning("*").Insert()
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return user, err
 }

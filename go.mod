@@ -4,8 +4,12 @@ go 1.20
 
 require (
 	github.com/99designs/gqlgen v0.17.31
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/go-chi/chi v1.5.4
 	github.com/go-pg/pg/v10 v10.11.0
+	github.com/rs/cors v1.9.0
 	github.com/vektah/gqlparser/v2 v2.5.1
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 )
 
 require (
@@ -27,7 +31,6 @@ require (
 	github.com/vmihailenco/tagparser v0.1.2 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect

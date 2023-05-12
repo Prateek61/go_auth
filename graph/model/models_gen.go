@@ -2,12 +2,34 @@
 
 package model
 
-type NewTodo struct {
-	Text   string `json:"text"`
-	UserID string `json:"userId"`
+import (
+	"time"
+)
+
+type AuthResponse struct {
+	AuthToken *AuthToken `json:"authToken"`
+	User      *User      `json:"user"`
 }
 
-type NewUser struct {
+type AuthToken struct {
+	AccessToken string    `json:"accessToken"`
+	ExpiredAt   time.Time `json:"expiredAt"`
+}
+
+type LoginInput struct {
 	Username string `json:"username"`
-	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type RegisterInput struct {
+	Username        string `json:"username"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirmPassword"`
+	FirstName       string `json:"firstName"`
+	LastName        string `json:"lastName"`
+}
+
+type TodoInput struct {
+	Text string `json:"text"`
 }

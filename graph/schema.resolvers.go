@@ -7,77 +7,132 @@ package graph
 import (
 	"context"
 	"errors"
+	"log"
 
 	"github.com/Prateek61/go_auth/graph/model"
+	"github.com/Prateek61/go_auth/middleware"
 )
 
 // CreateTodo is the resolver for the createTodo field.
-func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	// Find user with input.UserID
-	// If user not found, return error
-	// If user found, create todo with input.UserID
+func (r *mutationResolver) CreateTodo(ctx context.Context, input model.TodoInput) (*model.Todo, error) {
+	currentUser, err := middleware.GetCurrentUserFromCTX(ctx)
 
-	_, err := r.UsersRepo.GetUserByID(input.UserID)
 	if err != nil {
-		return nil, errors.New("user not found")
+		return nil, ErrUnauthenticated
 	}
 
 	todo := &model.Todo{
 		Text:   input.Text,
-		UserID: input.UserID,
+		UserID: currentUser.ID,
 	}
 
 	err = r.TodosRepo.CreateTodo(todo)
-	if err != nil {
-		return nil, err
-	}
-
-	return todo, nil
+	return todo, err
 }
 
-// CreateUser is the resolver for the createUser field.
-func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*model.User, error) {
+// Register is the resolver for the register field.
+func (r *mutationResolver) Register(ctx context.Context, input *model.RegisterInput) (*model.AuthResponse, error) {
+	// Check if user with input.Email exists
+	_, err := r.UsersRepo.GetUserByEmail(input.Email)
+	if err == nil {
+		return nil, errors.New("email already in use")
+	}
+
+	_, err = r.UsersRepo.GetUserByUsername(input.Username)
+	if err == nil {
+		return nil, errors.New("username already in use")
+	}
+
 	user := &model.User{
-		Username: input.Username,
-		Email:    input.Email,
+		Username:  input.Username,
+		Email:     input.Email,
+		FirstName: input.FirstName,
+		LastName:  input.LastName,
+		DeletedAt: nil,
 	}
 
-	err := r.UsersRepo.CreateUser(user)
+	err = user.HashPassword(input.Password)
 	if err != nil {
-		return nil, err
+		log.Printf("Error hashing password: %v", err)
+		return nil, errors.New("something went wrong")
 	}
 
-	return user, nil
+	tx, err := r.UsersRepo.DB.Begin()
+
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		return nil, errors.New("something went wrong")
+	}
+	defer tx.Rollback()
+
+	_, err = r.UsersRepo.CreateUser(tx, user)
+	if err != nil {
+		log.Printf("Error creating user: %v", err)
+		return nil, errors.New("something went wrong")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Printf("Error committing transaction: %v", err)
+		return nil, errors.New("something went wrong")
+	}
+
+	token, err := user.GenerateToken()
+	if err != nil {
+		log.Printf("Error generating token: %v", err)
+		return nil, errors.New("something went wrong")
+	}
+
+	return &model.AuthResponse{
+		User:      user,
+		AuthToken: token,
+	}, nil
+}
+
+// Login is the resolver for the login field.
+func (r *mutationResolver) Login(ctx context.Context, input *model.LoginInput) (*model.AuthResponse, error) {
+	user, err := r.UsersRepo.GetUserByUsername(input.Username)
+
+	if err != nil {
+		return nil, ErrBadCredentials
+	}
+
+	err = user.CheckPassword(input.Password)
+	if err != nil {
+		return nil, ErrBadCredentials
+	}
+
+	token, err := user.GenerateToken()
+	if err != nil {
+		return nil, errors.New("something went wrong")
+	}
+
+	return &model.AuthResponse{
+		User:      user,
+		AuthToken: token,
+	}, nil
 }
 
 // Todos is the resolver for the todos field.
 func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	return r.TodosRepo.GetTodos()
-}
+	currentUser, err := middleware.GetCurrentUserFromCTX(ctx)
 
-// User is the resolver for the user field.
-func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
-	return r.UsersRepo.GetUserByID(id)
-}
-
-// Users is the resolver for the users field.
-func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
-	return r.UsersRepo.GetUsers()
-}
-
-// User is the resolver for the user field.
-func (r *todoResolver) User(ctx context.Context, obj *model.Todo) (*model.User, error) {
-	user, err := r.UsersRepo.GetUserByID(obj.UserID)
 	if err != nil {
-		return nil, err
+		return nil, ErrUnauthenticated
 	}
 
-	return user, nil
+	return r.TodosRepo.GetTodosByUserID(currentUser.ID)
 }
 
-// Todos is the resolver for the todos field.
-func (r *userResolver) Todos(ctx context.Context, obj *model.User) ([]*model.Todo, error) {
-	return r.TodosRepo.GetTodosByUserID(obj.ID)
+// User is the resolver for the user field.
+func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
+	currentUser, err := middleware.GetCurrentUserFromCTX(ctx)
+
+	if err != nil {
+		return nil, ErrUnauthenticated
+	}
+
+	return currentUser, nil
 }
 
 // Mutation returns MutationResolver implementation.
@@ -86,13 +141,5 @@ func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
-// Todo returns TodoResolver implementation.
-func (r *Resolver) Todo() TodoResolver { return &todoResolver{r} }
-
-// User returns UserResolver implementation.
-func (r *Resolver) User() UserResolver { return &userResolver{r} }
-
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-type todoResolver struct{ *Resolver }
-type userResolver struct{ *Resolver }
