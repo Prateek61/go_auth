@@ -16,6 +16,7 @@ type Resolver struct{
 	UsersRepo postgres.UsersRepo
 }
 
+// Error definitions
 var (
 	// ErrUnauthenticated is returned when the user is not authenticated.
 	ErrUnauthenticated = errors.New("unauthenticated")

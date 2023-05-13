@@ -9,6 +9,7 @@ type TodosRepo struct {
 	DB *pg.DB
 }
 
+// GetTodos returns all todos
 func (t *TodosRepo) GetTodos() ([]*model.Todo, error) {
 	var todos []*model.Todo
 	err := t.DB.Model(&todos).Select()
@@ -20,6 +21,7 @@ func (t *TodosRepo) GetTodos() ([]*model.Todo, error) {
 	return todos, nil
 }
 
+// CreateTodo creates a new todo
 func (t *TodosRepo) CreateTodo(todo *model.Todo) error {
 	_, err := t.DB.Model(todo).Insert()
 
@@ -30,6 +32,7 @@ func (t *TodosRepo) CreateTodo(todo *model.Todo) error {
 	return nil
 }
 
+// GetTodosByUserID returns all todos for a user
 func (t *TodosRepo) GetTodosByUserID(userID string) ([]*model.Todo, error) {
 	var todos []*model.Todo
 	err := t.DB.Model(&todos).Where("user_id = ?", userID).Select()

@@ -5,7 +5,6 @@ import (
 	"context"
 
 	"github.com/go-pg/pg/v10"
-	//"github.com/go-pg/pg/v10/orm"
 )
 
 type DBLogger struct {}
@@ -20,6 +19,7 @@ func (d DBLogger) AfterQuery(ctx context.Context ,q *pg.QueryEvent) error {
 	return nil
 }
 
+// New creates a new DB instance
 func New(opts *pg.Options) *pg.DB {
 	db := pg.Connect(opts)
 

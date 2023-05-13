@@ -20,19 +20,20 @@ type User struct {
 	DeletedAt *time.Time `json:"-" pg:",soft_delete"`
 }
 
+// HashPassword hashes the user password
 func (u *User) HashPassword(password string) error {
 	bytePassword := []byte(password)
-	hashedPassword, err := bcrypt.GenerateFromPassword(bytePassword, bcrypt.DefaultCost)
 
+	hashedPassword, err := bcrypt.GenerateFromPassword(bytePassword, bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
-
 	u.Password = string(hashedPassword)
 
 	return nil
 }
 
+// GenerateToken generates a new JWT token for the user
 func (u *User) GenerateToken() (*AuthToken, error) {
 	expiredAt := time.Now().Add(time.Hour * 24 * 7)
 
@@ -54,6 +55,7 @@ func (u *User) GenerateToken() (*AuthToken, error) {
 	}, nil
 }
 
+// CheckPassword checks if the password is correct
 func (u *User) CheckPassword(password string) error {
 	bytePassword := []byte(password)
 	byteHashedPassword := []byte(u.Password)

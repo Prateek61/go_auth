@@ -9,6 +9,7 @@ type UsersRepo struct {
 	DB *pg.DB
 }
 
+// GetUserByField returns a user by a given field and value
 func (u *UsersRepo) GetUserByField(field string, value string) (*model.User, error) {
 	var user model.User
 	err := u.DB.Model(&user).Where(field + " = ?", value).First()
@@ -28,6 +29,7 @@ func (u *UsersRepo) GetUserByEmail(email string) (*model.User, error) {
 	return u.GetUserByField("email", email)
 }
 
+// GetUsers returns all users
 func (u *UsersRepo) GetUsers() ([]*model.User, error) {
 	var users []*model.User
 	err := u.DB.Model(&users).Select()
@@ -35,6 +37,7 @@ func (u *UsersRepo) GetUsers() ([]*model.User, error) {
 	return users, err
 }
 
+// CreateUser creates a new user
 func (u *UsersRepo) CreateUser(tx *pg.Tx, user *model.User) (*model.User, error) {
 	_, err := tx.Model(user).Returning("*").Insert()
 
