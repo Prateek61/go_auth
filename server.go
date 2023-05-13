@@ -8,23 +8,23 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/Prateek61/go_auth/graph"
+	customMiddleware "github.com/Prateek61/go_auth/middleware"
 	"github.com/Prateek61/go_auth/postgres"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-pg/pg/v10"
 	"github.com/rs/cors"
-	customMiddleware "github.com/Prateek61/go_auth/middleware"
 )
 
 const defaultPort = "8080"
 
 func main() {
 	// Setup DB
-	DB := postgres.New(&pg.Options{
-		User: "postgres",
-		Password: "postgres",
-		Database: "go_auth_dev",
-	})
+	opt, err := pg.ParseURL(os.Getenv("DB_URL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	DB := postgres.New(opt)
 
 	defer DB.Close()
 
